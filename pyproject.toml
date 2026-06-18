@@ -1,0 +1,14 @@
+[project]
+name = "bnlp-data-platform-example"
+version = "0.1.0"
+description = "BNLP Data Processing Platform"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "apache-airflow>=3.2.2",
+    "dbt-postgres>=1.10.0",
+    "faker>=40.23.0",
+    "polars>=1.41.2",
+    "psycopg2-binary>=2.9.12",
+    "sqlalchemy>=2.0.51",
+]
