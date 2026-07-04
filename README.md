@@ -9,7 +9,9 @@ Use a .env file at the project's root to specify the following variables:
 - DB_USER
 - DB_PASS
 - DB_NAME
-- DB_CONN
+- DB_PORT
+- DB_HOST
+- DB_CONN (connection string)
 - _AIRFLOW_WWW_USER_USERNAME
 - _AIRFLOW_WWW_USER_PASSWORD
 - AIRFLOW_PROJ_DIR
