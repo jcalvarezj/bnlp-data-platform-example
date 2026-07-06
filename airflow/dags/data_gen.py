@@ -6,22 +6,39 @@ import polars as pl
 import faker_commerce
 from faker import Faker
 from polars import DataFrame
+from adbc_driver_manager import ProgrammingError
 
 from logger import logger
-from constants import DB_CONN_STR
+from constants import DB_CONN_STR, GET_LATEST_ID_FROM
 
 
 class DataGen(ABC):
     fake = Faker()
-    Faker.seed(42)
-    random.seed(42)
 
     @property
     @abstractmethod
     def table_name(self): ...
 
+    @property
+    @abstractmethod
+    def table_prefix(self): ...
+
     @abstractmethod
     def generate(self) -> DataFrame: ...
+
+    def get_latest_id(self) -> int:
+        try:
+            return pl.read_database_uri(
+                GET_LATEST_ID_FROM.replace("{prefix}", self.table_prefix) \
+                    .replace("{table}", self.table_name),
+                DB_CONN_STR, engine="adbc"
+            )["max"][0]
+        except ProgrammingError as e:
+            if "NOT_FOUND" in str(e):
+                return 0
+            else:
+                logger.exception(e)
+                raise e
 
     def send_to_db(self, df: DataFrame):
         try:
@@ -39,11 +56,13 @@ class DataGen(ABC):
 class UserGen(DataGen):
     num_users = 5
     table_name = "users"
+    table_prefix = "user"
 
     def generate(self) -> DataFrame:
         users_list = []
+        latest_id = self.get_latest_id()
 
-        for user_id in range(1, self.num_users + 1):
+        for user_id in range(1 + latest_id, self.num_users + 1 + latest_id):
             name = self.fake.name()
             email = name.lower().replace(" ", "") + "@email.com"
             now = datetime.now()
@@ -67,6 +86,7 @@ class UserGen(DataGen):
 class PurchaseGen(DataGen):
     num_purchases = 10
     table_name = "purchases"
+    table_prefix = "purchase"
 
     def __init__(self, user_ids):
         self.user_ids = user_ids
@@ -74,7 +94,9 @@ class PurchaseGen(DataGen):
 
     def generate(self) -> DataFrame:
         purchases_list = []
-        for purchase_id in range(100, 100 + self.num_purchases):
+        latest_id = self.get_latest_id()
+
+        for purchase_id in range(100 + latest_id, 100 + self.num_purchases + latest_id):
             assigned_user_id = random.choice(self.user_ids)
 
             purchases_list.append({
@@ -86,17 +108,3 @@ class PurchaseGen(DataGen):
             })
 
         return pl.DataFrame(purchases_list)
-
-
-if __name__ == "__main__":
-    ug = UserGen()
-    users_df = ug.generate()
-    user_ids = users_df["user_id"].to_list()
-
-    pg = PurchaseGen(user_ids)
-    purchases_df = pg.generate()
-
-    ug.send_to_db(users_df)
-    pg.send_to_db(purchases_df)
-
-    print("OK")

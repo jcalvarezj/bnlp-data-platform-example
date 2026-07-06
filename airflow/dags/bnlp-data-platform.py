@@ -31,6 +31,10 @@ def run_data_platform():
         purch_gen = PurchaseGen(user_df["user_id"].to_list())
         purch_df = purch_gen.generate()
 
+        logger.info(f"Generated {purch_df.height} rows of purchase data. Sending to DB...")
+
+        purch_gen.send_to_db(purch_df)
+
         return {"status": "success"}
 
     init_db_task = init_db()
