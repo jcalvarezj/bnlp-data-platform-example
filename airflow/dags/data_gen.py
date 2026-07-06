@@ -8,7 +8,7 @@ from faker import Faker
 from polars import DataFrame
 
 from logger import logger
-from constants import db_conn_str
+from constants import DB_CONN_STR
 
 
 class DataGen(ABC):
@@ -27,11 +27,13 @@ class DataGen(ABC):
         try:
             df.write_database(
                 table_name=self.table_name,
-                connection=db_conn_str,
+                if_table_exists="append",
+                connection=DB_CONN_STR,
                 engine="adbc"
             )
         except Exception as e:
-            logger.exception(e)
+            logger.exception(f"An error occurred when sending data to the database: {e}")
+            raise e
 
 
 class UserGen(DataGen):

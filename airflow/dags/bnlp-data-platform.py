@@ -1,10 +1,20 @@
 from airflow.sdk import dag, task
 
 from data_gen import UserGen, PurchaseGen
+from constants import CREATE_WAREHOUSE_DB
+
+from logger import logger
 
 
 @dag
 def run_data_platform():
+    @task.sql(
+        conn_id="warehouse_conn"
+    )
+    def init_db():
+        logger.info("Create or replace warehouse database")
+        return CREATE_WAREHOUSE_DB
+
     @task
     def generate_data():
         logger.info("Generating user data...")
@@ -23,8 +33,9 @@ def run_data_platform():
 
         return {"status": "success"}
 
+    init_db_task = init_db()
     generate_data_task = generate_data()
-
-    generate_data_task
+    
+    init_db_task >> generate_data_task
 
 run_data_platform()
