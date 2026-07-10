@@ -37,5 +37,5 @@ The platform is orchestrated by the `run_data_platform` DAG, which generates dat
 
 - Airflow docker compose file has been taken from 'https://airflow.apache.org/docs/apache-airflow/3.2.2/docker-compose.yaml'
 
-- Input Database ERD:
+- Generated input database ERD:
 ![](static/system-Bronze.jpg)

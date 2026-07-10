@@ -9,8 +9,9 @@ from polars import DataFrame
 from adbc_driver_manager import ProgrammingError
 
 from logger import logger
-from constants import (DB_CONN_STR, GET_LATEST_ID_FROM, STATUS_PENDING,
-                       GET_LATEST_N_IDS_FROM)
+from constants import (DB_CONN_STR, GET_LATEST_ID_FROM, STATUS_TYPES,
+                       GET_LATEST_N_IDS_FROM, INTEREST_RATE, PAYMENT_METHODS,
+                       GET_PAID_INSTALLMENTS)
 
 
 class DataGen(ABC):
@@ -51,7 +52,7 @@ class DataGen(ABC):
             )[f"{self.table_prefix}_id"].to_list()
         except ProgrammingError as e:
             if "NOT_FOUND" in str(e):
-                return 0
+                return []
             else:
                 logger.exception(e)
                 raise e
@@ -169,10 +170,11 @@ class InstallmentGen(DataGen):
         now = datetime.now()
 
         for purch_id in self.purchases_list:
-            for _ in range(1, self.num_instlmt_per_purchase + 1):
+            for i in range(1, self.num_instlmt_per_purchase + 1):
                 installment_id += 1
                 capital_value = random.uniform(10.0, 20000.0)
-                interest_value = capital_value * 0.03
+                interest_value = capital_value * INTEREST_RATE
+                status = "PE" if i == 1 else random.choice(list(STATUS_TYPES))
                 installments_list.append({
                     "installment_id": installment_id,
                     "purchase_id": purch_id,
@@ -180,10 +182,52 @@ class InstallmentGen(DataGen):
                     "capital_value": capital_value,
                     "interest_value": interest_value,
                     "total_value": capital_value + interest_value,
-                    "status": STATUS_PENDING,
+                    "status": status,
                     "purchase_id": purch_id,
                     "created_at": now,
                     "updated_at": now
                 })
 
         return DataFrame(installments_list)
+
+    def get_paid_installments(self) -> DataFrame:
+        try:
+            return pl.read_database_uri(
+                GET_PAID_INSTALLMENTS,
+                DB_CONN_STR, engine="adbc"
+            )
+        except ProgrammingError as e:
+            if "NOT_FOUND" in str(e):
+                return []
+            else:
+                logger.exception(e)
+                raise e
+        return DataFrame()
+
+class PaymentGen(DataGen):
+    num_payments = 5
+    table_name = "payments"
+    table_prefix = "payment"
+    table_write_mode = "replace"
+
+    def __init__(self, installments_df):
+        self.installments_df = installments_df
+
+    def generate(self):
+        payment_id = 0
+        payments_list = []
+        now = datetime.now()
+
+        for installment_row in self.installments_df.iter_rows(named=True):
+            payment_id += 1
+            payments_list.append({
+                "payment_id": payment_id,
+                "installment_id": installment_row["installment_id"],
+                "payment_date": now.date(),
+                "amount": installment_row["total_value"],
+                "payment_method": random.choice(list(PAYMENT_METHODS)),
+                "created_at": now,
+                "updated_at": now
+            })
+
+        return DataFrame(payments_list)
