@@ -1,6 +1,6 @@
 # bnlp-data-platform-example --WIP--
 
-This is a small practice data engineering project that intends to build a system that produces BNLP-related data, passes it through an ETL pipeline to standardize it, and loads consumer-ready data into a Postgres Data Warehouse
+Small practice data engineering project. This is a system that produces BNLP-related data, passes it through an ETL pipeline to standardize it, and loads consumer-ready data into a Postgres Data Warehouse
 
 ## Configuration
 
@@ -12,6 +12,8 @@ Use a .env file at the project's root to specify the following variables:
 - DB_PORT
 - DB_HOST
 - DB_CONN (connection string)
+- AIRFLOW_DB_CONN (Postgres admin connection name managed through Airflow UI)
+- AIRFLOW_DB_DW_CONN (Postrgres warehouse connection name managed through Airflow UI)
 - _AIRFLOW_WWW_USER_USERNAME
 - _AIRFLOW_WWW_USER_PASSWORD
 - AIRFLOW_PROJ_DIR
@@ -22,12 +24,12 @@ Use a .env file at the project's root to specify the following variables:
 ## Execution
 
 - Make sure you have a Docker service up and running
-- Run `docker compose up` to run the whole system
+- Run `docker compose up` to run the whole system (use --build when changing configurations to recreate the executed container)
 - If automatic initialization doesn't work, run `docker compose up airflow-init` to create initial configurations (only done once) and then try to run the whole system again
 
 You should be able to run Airflow's UI at http://localhost:8080 after the startup process finishes (healthy apiserver service)
 
-Make sure to create a Postgres connection through the UI (Admin > Connections) named `warehouse_conn` to be able to run the DAG
+Make sure to create a Postgres connection through the UI (Admin > Connections) named as the `AIRFLOW_DB_CONN` variable to be able to run the DAG
 
 ## Data Platform Automatization
 

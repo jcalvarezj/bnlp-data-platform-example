@@ -9,8 +9,8 @@ from polars import DataFrame
 from adbc_driver_manager import ProgrammingError
 
 from logger import logger
-from constants import (DB_CONN_STR, GET_LATEST_ID_FROM, STATUS_TYPES,
-                       GET_LATEST_N_IDS_FROM, INTEREST_RATE, PAYMENT_METHODS,
+from constants import (DB_CONN_STR, GET_LATEST_ID_FROM, STATUS_TYPES, RAW_SCHEMA,
+                       GET_LATEST_N_ROWS_FROM, INTEREST_RATE, PAYMENT_METHODS,
                        GET_PAID_INSTALLMENTS)
 
 
@@ -32,8 +32,8 @@ class DataGen(ABC):
     def get_latest_id(self) -> int:
         try:
             return pl.read_database_uri(
-                GET_LATEST_ID_FROM.replace("{prefix}", self.table_prefix) \
-                    .replace("{table}", self.table_name),
+                GET_LATEST_ID_FROM.replace("[prefix]", self.table_prefix) \
+                    .replace("[table]", self.table_name),
                 DB_CONN_STR, engine="adbc"
             )["max"][0]
         except ProgrammingError as e:
@@ -43,16 +43,18 @@ class DataGen(ABC):
                 logger.exception(e)
                 raise e
 
-    def get_latest_n_ids(self, n: int) -> int:
+    def get_latest_n_rows(self, n: int, cols: str = "*") -> DataFrame:
         try:
             return pl.read_database_uri(
-                GET_LATEST_N_IDS_FROM.replace("{prefix}", self.table_prefix) \
-                    .replace("{table}", self.table_name).replace("{n}", f"{n}"),
+                GET_LATEST_N_ROWS_FROM \
+                    .replace("[cols]", cols) \
+                    .replace("[table]", self.table_name) \
+                    .replace("[n]", f"{n}"),
                 DB_CONN_STR, engine="adbc"
-            )[f"{self.table_prefix}_id"].to_list()
+            )
         except ProgrammingError as e:
             if "NOT_FOUND" in str(e):
-                return []
+                return DataFrame()
             else:
                 logger.exception(e)
                 raise e
@@ -60,11 +62,12 @@ class DataGen(ABC):
     def send_to_db(self, df: DataFrame):
         try:
             df.write_database(
-                table_name=self.table_name,
+                table_name=f"{RAW_SCHEMA}.{self.table_name}",
                 if_table_exists=self.table_write_mode,
                 connection=DB_CONN_STR,
                 engine="adbc"
             )
+            logger.info(f"{self.table_name.capitalize()} data successfully sent to DB")
         except Exception as e:
             logger.exception(f"An error occurred when sending data to the database: {e}")
             raise e
@@ -146,7 +149,7 @@ class PurchaseGen(DataGen):
                 "user_id": assigned_user_id,
                 "product_id": self.fake.numerify("@@-#####"),
                 "product_name": self.fake.bs().title(),
-                "purchase_value": round(random.uniform(10.0, 500.0), 2),
+                "purchase_value": round(random.uniform(10.0, 50000.0), 2),
                 "purchase_date": self.fake.date_this_year().strftime("%Y-%m-%d"),
                 "created_at": now,
                 "updated_at": now
@@ -161,29 +164,28 @@ class InstallmentGen(DataGen):
     table_prefix = "installment"
     table_write_mode = "replace"
 
-    def __init__(self, purchases_list):
-        self.purchases_list = purchases_list
+    def __init__(self, purchases_df: DataFrame):
+        self.purchases_df = purchases_df
 
     def generate(self):
         installments_list = []
         installment_id = 0
         now = datetime.now()
 
-        for purch_id in self.purchases_list:
+        for purch_row in self.purchases_df.iter_rows(named=True):
             for i in range(1, self.num_instlmt_per_purchase + 1):
                 installment_id += 1
-                capital_value = random.uniform(10.0, 20000.0)
-                interest_value = capital_value * INTEREST_RATE
+                capital_value = purch_row["purchase_value"]
+                interest_value = round(capital_value * INTEREST_RATE, 2)
                 status = "PE" if i == 1 else random.choice(list(STATUS_TYPES))
                 installments_list.append({
                     "installment_id": installment_id,
-                    "purchase_id": purch_id,
+                    "purchase_id": purch_row["purchase_id"],
                     "due_date": self.fake.date_between("+1y", "+2y"),
                     "capital_value": capital_value,
                     "interest_value": interest_value,
                     "total_value": capital_value + interest_value,
                     "status": status,
-                    "purchase_id": purch_id,
                     "created_at": now,
                     "updated_at": now
                 })
@@ -203,6 +205,7 @@ class InstallmentGen(DataGen):
                 logger.exception(e)
                 raise e
         return DataFrame()
+
 
 class PaymentGen(DataGen):
     num_payments = 5
