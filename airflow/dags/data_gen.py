@@ -150,7 +150,8 @@ class PurchaseGen(DataGen):
                 "product_id": self.fake.numerify("@@-#####"),
                 "product_name": self.fake.bs().title(),
                 "purchase_value": round(random.uniform(10.0, 50000.0), 2),
-                "purchase_date": self.fake.date_this_year().strftime("%Y-%m-%d"),
+                "currency_code": random.choice(("USD", None)),
+                "purchase_date": self.fake.date_this_year(),
                 "created_at": now,
                 "updated_at": now
             })
