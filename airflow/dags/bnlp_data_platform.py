@@ -8,6 +8,15 @@ from data_gen import (DataGen, UserGen, PurchaseGen, MerchantGen,
 from logger import logger
 
 
+def _generate_and_send_specific_data(data_gen: DataGen):
+    logger.info(f"Generating {data_gen.table_prefix} data")
+    data_df = data_gen.generate()
+    logger.info(f"Generated {data_df.height} rows of {data_gen.table_prefix} data."
+                + " Sending to DB...")
+    data_gen.send_to_db(data_df)
+    return data_df
+
+
 @dag
 def run_data_platform():
     @task.branch
@@ -32,14 +41,6 @@ def run_data_platform():
     def create_raw_schema():
         logger.info("Creating raw schema")
         return CREATE_RAW_SCHEMA
-
-    def _generate_and_send_specific_data(data_gen: DataGen):
-        logger.info(f"Generating {data_gen.table_prefix} data")
-        data_df = data_gen.generate()
-        logger.info(f"Generated {data_df.height} rows of {data_gen.table_prefix} data."
-                    + " Sending to DB...")
-        data_gen.send_to_db(data_df)
-        return data_df
 
     @task(trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS)
     def generate_and_send_data():

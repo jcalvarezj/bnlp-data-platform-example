@@ -24,7 +24,7 @@ Use a .env file at the project's root to specify the following variables:
 ## Execution
 
 - Make sure you have a Docker service up and running
-- Run `docker compose up` to run the whole system (use --build when changing configurations to recreate the executed container)
+- Run `docker compose up` to run the whole system (use --build to force recreating the container)
 - If automatic initialization doesn't work, run `docker compose up airflow-init` to create initial configurations (only done once) and then try to run the whole system again
 
 You should be able to run Airflow's UI at http://localhost:8080 after the startup process finishes (healthy apiserver service)
