@@ -1,0 +1,10 @@
+sources:
+  - name: dbt_source
+    database: "{{ env_var('DB_NAME') }}"
+    schema: raw
+    tables:
+      - name: merchants
+      - name: users
+      - name: purchases
+      - name: installments
+      - name: payments
