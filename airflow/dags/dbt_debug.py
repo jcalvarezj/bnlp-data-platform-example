@@ -5,15 +5,13 @@ from airflow.sdk import task, dag
 from constants import DBT_PATH
 
 @dag
-def xxx_dag():
+def dbt_debug_dag(): # Just for testing dbt-db connection
     @task.bash
-    def yyy_task():
-
+    def dbt_debug_task():
         return "cd /opt/dbt_etl && dbt debug"
-        #return f"""cd $HOME && ls"""
 
-    yyy = yyy_task()
+    dbt_debug = dbt_debug_task()
 
-    yyy
+    dbt_debug
 
-xxx_dag()
+dbt_debug_dag()

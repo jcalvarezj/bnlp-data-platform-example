@@ -5,7 +5,7 @@ bnlp_data_platform_etl:
       host: "{{ env_var('DB_HOST') }}"
       pass: "{{ env_var('DB_PASS') }}"
       port: "{{ int(env_var('DB_PORT')) | as_number }}"
-      schema: dbt
+      schema: bnlp
       threads: 4
       type: postgres
       user: "{{ env_var('DB_USER') }}"
@@ -17,7 +17,7 @@ dbt_etl:
       host: "{{ env_var('DB_HOST') }}"
       pass: "{{ env_var('DB_PASS') }}"
       port: "{{ env_var('DB_PORT') | as_number }}"
-      schema: dbt
+      schema: bnlp
       threads: 4
       type: postgres
       user: "{{ env_var('DB_USER') }}"

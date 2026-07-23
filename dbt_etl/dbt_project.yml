@@ -19,3 +19,9 @@ models:
     bronze:
       +materialized: view
       +schema: bronze
+    silver:
+      +materialized: table
+      +schema: silver
+
+data_tests:
+  +store_failures: true
